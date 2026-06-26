@@ -709,40 +709,1404 @@ const uniqueIds: Set<string> = new Set(["1", "2", "3"]);
 
 ## Built-in Utility Types 
 
+TypeScript provides a set of built-in utility types that let you transform existing types into new ones without rewriting them from scratch. These are used constantly in real codebases to avoid duplication and keep your types DRY (Don't Repeat Yourself).
+
+
 
 ### `Parial<T>`: Making things optional 
 
+`Partial<T>` takes an existing type and makes all of its properties optional. This is incredibly useful when you want to update an object but don't want to require every single property.
+
+**Without Partial (The Problem)**:
+```
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  age: number;
+}
+
+// If we want to update just the email, we'd have to provide ALL properties
+function updateUser(user: User, updates: User): User {
+  return { ...user, ...updates };
+}
+
+// This is annoying - we have to pass everything even if we're only changing one thing
+updateUser(
+  { id: "1", name: "Alice", email: "alice@example.com", age: 25 },
+  { id: "1", name: "Alice", email: "newemail@example.com", age: 25 } // Had to repeat everything!
+);
+```
+
+**With Partial (The Solution)**:
+
+```
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  age: number;
+}
+
+// Now updates can have ANY subset of User properties
+function updateUser(user: User, updates: Partial<User>): User {
+  return { ...user, ...updates };
+}
+
+// Much better - only pass what you want to change
+updateUser(
+  { id: "1", name: "Alice", email: "alice@example.com", age: 25 },
+  { email: "newemail@example.com" } // Only updating email!
+);
+
+updateUser(
+  { id: "1", name: "Alice", email: "alice@example.com", age: 25 },
+  { name: "Alice Smith", age: 26 } // Updating name and age
+);
+```
+
+**Common use cases:**:
+
+- Update/Patch API endpoints.
+- Form data where not all fields are filled.
+- Configuration objects with optional overrides.
+
 ### `Required<T>`: Making things mandatory
+
+`Required<T>` does the opposite of `Partial`—it takes a type with optional properties and makes **all of them required**. This is useful when you have a configuration object where some properties are optional during input, but you want to ensure they all exist after processing
+
+```
+interface UserSettings {
+  theme?: "light" | "dark";
+  notifications?: boolean;
+  language?: string;
+}
+
+// During input, all properties are optional
+function getUserInput(): UserSettings {
+  return { theme: "dark" }; // Only theme is provided
+}
+
+// After processing, we want to ensure ALL settings exist with defaults
+type CompleteUserSettings = Required<UserSettings>;
+
+function applyDefaults(settings: UserSettings): CompleteUserSettings {
+  return {
+    theme: settings.theme || "light",
+    notifications: settings.notifications || true,
+    language: settings.language || "en"
+  };
+}
+
+const input = getUserInput();
+const complete = applyDefaults(input);
+
+// Now TypeScript knows ALL properties exist
+console.log(complete.theme);         // Type: "light" | "dark" (not optional!)
+console.log(complete.notifications); // Type: boolean (not optional!)
+console.log(complete.language);      // Type: string (not optional!)
+```
+**Common use cases:**:
+
+- Configuration objects after applying defaults.
+- Database records where optional fields become required after creation.
+- Form validation where all fields must be present before submission.
 
 ### `Pick<T,K>` and `Omit<T,K>`: Selecting or removing properties 
 
+These two utility types let you create new types by selecting or excluding specific properties from an existing type.
+
+**`Pick<T, K>`: Keep only specified properties.**
+`Pick<T, K>` creates a new type by picking only the properties `K` from type `T`.
+
+```
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Create a type with only id and name
+type UserSummary = Pick<User, "id" | "name">;
+
+const summary: UserSummary = {
+  id: "1",
+  name: "Alice"
+  // email, password, etc. are NOT allowed here
+};
+
+// Common use case: API responses where you don't want to expose sensitive data
+function getUserProfile(userId: string): UserSummary {
+  const user = database.findById(userId);
+  return {
+    id: user.id,
+    name: user.name
+    // We intentionally don't return password, email, etc.
+  };
+}
+```
+
+
+
+`Omit<T, K>` creates a new type by omitting (removing) the properties `K` from type `T`. This is the opposite of `Pick`.
+
+```
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Create a type without password (for public APIs)
+type PublicUser = Omit<User, "password">;
+
+const publicUser: PublicUser = {
+  id: "1",
+  name: "Alice",
+  email: "alice@example.com",
+  createdAt: new Date(),
+  updatedAt: new Date()
+  // password is NOT allowed here
+};
+
+// Remove multiple properties
+type CreateUserInput = Omit<User, "id" | "createdAt" | "updatedAt">;
+
+const newUser: CreateUserInput = {
+  name: "Bob",
+  email: "bob@example.com",
+  password: "secret123"
+  // id, createdAt, updatedAt are NOT allowed (they'll be generated by the server)
+};
+```
+
+**Pick vs Omit - When to use which:**
+
+- Use `Pick` when you want to keep only a few properties from a large type.
+- Use `Omit` when you want to remove just a few properties from a large type.
+- If you're keeping more than you're removing, use `Pick`.
+- If you're removing more than you're keeping, use `Omit`.
+
 ### `Record<K,T>`: Creating dicitionaries/maps
 
+`Record<K, T>` creates a type for an object where:
+
+- `K` is the type of the keys.
+- `T` is the type of the values.
+
+This is the TypeScript way to type dictionaries, maps, or key-value stores.
+
+```
+// A dictionary where keys are strings and values are numbers
+type Inventory = Record<string, number>;
+
+const inventory: Inventory = {
+  apples: 5,
+  bananas: 10,
+  oranges: 3
+};
+
+inventory.apples = 4; // OK
+// inventory.unknown = 5; // ERROR: Property 'unknown' doesn't exist
+
+// A dictionary where keys are specific strings (literal types)
+type UserRole = "admin" | "user" | "guest";
+type Permissions = Record<UserRole, string[]>;
+
+const permissions: Permissions = {
+  admin: ["read", "write", "delete"],
+  user: ["read", "write"],
+  guest: ["read"]
+  // All keys MUST be present because we specified the exact union type
+};
+```
 
 ## Type Narrowing and Guards
 
+When you work with Union types (values that can be multiple types), TypeScript doesn't always know which specific type you're dealing with at any given moment. Type narrowing is how you tell TypeScript: "At this point in the code, I know exactly what type this is."
+
 ### What is Type Narrowing.
+Type narrowing is the process of refining a variable's type from a broader type (like `string` | `number`) to a more specific type (like just `string`) within a specific block of code.
+
+**The Problem**:
+```
+function printLength(value: string | number) {
+  // ERROR: Property 'length' does not exist on type 'string | number'
+  console.log(value.length); 
+  
+  // ERROR: Property 'toFixed' does not exist on type 'string | number'
+  console.log(value.toFixed(2));
+}
+```
+TypeScript is saying: "I know `value` is either a string or a number, but I don't know which one it is right now. I can't let you call methods that only exist on one of them."
+
+
+**The Solution - Type Narrowing**:
+```
+function printLength(value: string | number) {
+  if (typeof value === "string") {
+    // TypeScript NOW knows value is a string
+    console.log(value.toUpperCase()); // Works!
+    console.log(value.length);        // Works!
+  } else {
+    // TypeScript NOW knows value is a number
+    console.log(value.toFixed(2));    // Works!
+    console.log(value * 2);           // Works!
+  }
+}
+```
+Inside the `if` block, TypeScript has "narrowed" the type from `string` | `number` to just `string`. Inside the `else` block, it's narrowed to just `number`.
+
+
+**Why this matters**:
+
+- Prevents runtime errors by catching type mismatches at compile time.
+- Enables autocomplete for the specific type.
+- Makes your code's intent clear to other developers.
+
 
 ### Checking tyes with `typeof`, `in` and `instanceof`
 
+TypeScript recognizes several patterns that narrow types. These are called "type guards."
+
+
+**`typeof` - For primitive types**
+
+Use `typeof` to check the type of primitive values (string, number, boolean, etc.).
+
+
+```
+function processValue(value: string | number | boolean) {
+  if (typeof value === "string") {
+    // value is narrowed to 'string'
+    console.log(value.toUpperCase());
+  } else if (typeof value === "number") {
+    // value is narrowed to 'number'
+    console.log(value.toFixed(2));
+  } else {
+    // value is narrowed to 'boolean'
+    console.log(value ? "Yes" : "No");
+  }
+}
+
+// Common typeof values:
+// "string", "number", "boolean", "undefined", "object", "function", "bigint", "symbol"
+```
+
+**Important limitation**: `typeof` can't distinguish between different object types. Both arrays and objects return `"object"`.
+
+```
+function handleData(data: string[] | { name: string }) {
+  // BAD: This doesn't work - both return "object"
+  if (typeof data === "object") {
+    // TypeScript still doesn't know if it's an array or object
+  }
+  
+  // GOOD: Use Array.isArray() instead
+  if (Array.isArray(data)) {
+    // TypeScript knows data is string[]
+    console.log(data[0].toUpperCase());
+  } else {
+    // TypeScript knows data is { name: string }
+    console.log(data.name);
+  }
+}
+```
+
+**`in` - For checking object properties**
+
+Use the `in` operator to check if a property exists on an object. This is perfect for narrowing union types of objects.
+
+```
+interface Fish {
+  swim: () => void;
+  name: string;
+}
+
+interface Bird {
+  fly: () => void;
+  name: string;
+}
+
+function move(animal: Fish | Bird) {
+  if ("swim" in animal) {
+    // TypeScript knows animal is a Fish
+    animal.swim();
+  } else {
+    // TypeScript knows animal is a Bird
+    animal.fly();
+  }
+}
+
+// Real-world example: API responses
+interface SuccessResponse {
+  status: "success";
+  data: User;
+}
+
+interface ErrorResponse {
+  status: "error";
+  message: string;
+}
+
+function handleResponse(response: SuccessResponse | ErrorResponse) {
+  if ("data" in response) {
+    // TypeScript knows response is SuccessResponse
+    console.log(response.data.name);
+  } else {
+    // TypeScript knows response is ErrorResponse
+    console.log(response.message);
+  }
+}
+```
+
+
+**`instanceof` - For class instances**
+
+Use `instanceof` to check if an object is an instance of a specific class. This is common when working with custom classes or built-in classes like `Date` or `Error`.
+
+```
+class Dog {
+  bark() {
+    console.log("Woof!");
+  }
+}
+
+class Cat {
+  meow() {
+    console.log("Meow!");
+  }
+}
+
+function makeSound(animal: Dog | Cat) {
+  if (animal instanceof Dog) {
+    // TypeScript knows animal is a Dog
+    animal.bark();
+  } else {
+    // TypeScript knows animal is a Cat
+    animal.meow();
+  }
+}
+
+// Real-world example: Error handling
+function handleError(error: Error | TypeError | RangeError) {
+  if (error instanceof TypeError) {
+    console.log("Type error:", error.message);
+  } else if (error instanceof RangeError) {
+    console.log("Range error:", error.message);
+  } else {
+    console.log("Generic error:", error.message);
+  }
+}
+
+// Checking for Date objects
+function formatDate(value: string | Date) {
+  if (value instanceof Date) {
+    // TypeScript knows value is a Date
+    return value.toISOString();
+  } else {
+    // TypeScript knows value is a string
+    return new Date(value).toISOString();
+  }
+}
+```
+
+**Truthiness narrowing**
+
+TypeScript also narrows types based on truthiness checks (checking if a value is truthy or falsy).
+
+```
+function printMessage(message: string | null | undefined) {
+  if (message) {
+    // TypeScript knows message is a non-empty string
+    console.log(message.toUpperCase());
+  } else {
+    // TypeScript knows message is null or undefined
+    console.log("No message provided");
+  }
+}
+
+// Be careful with this - it also treats 0, "", and false as falsy
+function printNumber(value: number | null) {
+  if (value) {
+    // This excludes 0!
+    console.log(value.toFixed(2));
+  }
+  
+  // Better approach for numbers
+  if (value !== null) {
+    console.log(value.toFixed(2)); // Includes 0
+  }
+}
+```
+
 ### Discriminated Unions 
+
+Discriminated unions (also called "tagged unions" or "algebraic data types") are a powerful pattern for working with union types. They use a common property (the "discriminant") that has a literal type, which TypeScript uses to narrow the union.
+
+
+**The Pattern:**:
+
+1. All types in the union share a common property with a literal type.
+2. Each type has a different value for that property.
+3. You check that property to narrow the type.
+
+**Basic Example**:
+
+```
+// All shapes have a 'kind' property with a literal type
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "square"; sideLength: number }
+  | { kind: "rectangle"; width: number; height: number };
+
+function getArea(shape: Shape): number {
+  switch (shape.kind) {
+    case "circle":
+      // TypeScript knows shape is { kind: "circle"; radius: number }
+      return Math.PI * shape.radius ** 2;
+    
+    case "square":
+      // TypeScript knows shape is { kind: "square"; sideLength: number }
+      return shape.sideLength ** 2;
+    
+    case "rectangle":
+      // TypeScript knows shape is { kind: "rectangle"; width: number; height: number }
+      return shape.width * shape.height;
+  }
+}
+
+// Usage
+const circle: Shape = { kind: "circle", radius: 5 };
+const square: Shape = { kind: "square", sideLength: 4 };
+
+console.log(getArea(circle)); // 78.54...
+console.log(getArea(square)); // 16
+```
+
+**Real-world Example: State Management**
+
+Discriminated unions are extremely common in state management (Redux, Zustand, etc.) and API handling.
+
+```
+// API request states
+type RequestState<T> =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; data: T }
+  | { status: "error"; error: string };
+
+interface User {
+  id: string;
+  name: string;
+}
+
+function renderUserList(state: RequestState<User[]>) {
+  switch (state.status) {
+    case "idle":
+      return <div>Ready to load users</div>;
+    
+    case "loading":
+      return <div>Loading...</div>;
+    
+    case "success":
+      // TypeScript knows state.data exists and is User[]
+      return (
+        <ul>
+          {state.data.map(user => (
+            <li key={user.id}>{user.name}</li>
+          ))}
+        </ul>
+      );
+    
+    case "error":
+      // TypeScript knows state.error exists and is string
+      return <div>Error: {state.error}</div>;
+  }
+}
+```
+
+**Real-world Example: Actions/Events**
+
+```
+// Different types of actions in a system
+type Action =
+  | { type: "ADD_TODO"; payload: { text: string } }
+  | { type: "TOGGLE_TODO"; payload: { id: number } }
+  | { type: "DELETE_TODO"; payload: { id: number } }
+  | { type: "CLEAR_COMPLETED" };
+
+function reducer(state: TodoState, action: Action): TodoState {
+  switch (action.type) {
+    case "ADD_TODO":
+      // TypeScript knows action.payload has { text: string }
+      return {
+        ...state,
+        todos: [...state.todos, { id: Date.now(), text: action.payload.text, completed: false }]
+      };
+    
+    case "TOGGLE_TODO":
+      // TypeScript knows action.payload has { id: number }
+      return {
+        ...state,
+        todos: state.todos.map(todo =>
+          todo.id === action.payload.id
+            ? { ...todo, completed: !todo.completed }
+            : todo
+        )
+      };
+    
+    case "DELETE_TODO":
+      // TypeScript knows action.payload has { id: number }
+      return {
+        ...state,
+        todos: state.todos.filter(todo => todo.id !== action.payload.id)
+      };
+    
+    case "CLEAR_COMPLETED":
+      // TypeScript knows there's no payload
+      return {
+        ...state,
+        todos: state.todos.filter(todo => !todo.completed)
+      };
+  }
+}
+```
+
+**Exhaustiveness Checking**
+One of the most powerful features of discriminated unions is that TypeScript can tell you if you forgot to handle a case.
+
+```
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "square"; sideLength: number };
+
+function getArea(shape: Shape): number {
+  switch (shape.kind) {
+    case "circle":
+      return Math.PI * shape.radius ** 2;
+    case "square":
+      return shape.sideLength ** 2;
+    default:
+      // If someone adds a new shape to the union but forgets to handle it here,
+      // TypeScript will throw an error on this line
+      const _exhaustiveCheck: never = shape;
+      return _exhaustiveCheck;
+  }
+}
+
+// Later, someone adds a new shape:
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "square"; sideLength: number }
+  | { kind: "triangle"; base: number; height: number }; // NEW!
+
+// Now TypeScript will error in getArea because we didn't handle "triangle"
+// This prevents bugs at compile time!
+```
 
 ## Object-Oriented (Classes)
 
+TypeScript adds strong typing to JavaScript classes. While modern JavaScript has classes, TypeScript lets you enforce types on properties, methods, and control access to them. You'll see classes used frequently for services, data models, and complex state management.
+
 ### Class Basics and Typing Properties 
 
+In TypeScript, you must declare the type of every class property. Unlike JavaScript where you can just assign values in the constructor, TypeScript requires you to define the shape upfront.
+
+#### Basic Class Structure
+
+```
+class User {
+  // Property declarations with types
+  id: number;
+  name: string;
+  email: string;
+  
+  // Constructor - parameters must be typed
+  constructor(id: number, name: string, email: string) {
+    this.id = id;
+    this.name = name;
+    this.email = email;
+  }
+  
+  // Methods with typed parameters and return types
+  greet(): string {
+    return `Hello, I'm ${this.name}`;
+  }
+  
+  updateEmail(newEmail: string): void {
+    this.email = newEmail;
+  }
+}
+
+const user = new User(1, "Alice", "alice@example.com");
+console.log(user.greet()); // "Hello, I'm Alice"
+```
+
+#### Readonly Properties 
+Use `readonly` to prevent properties from being changed after initialization. This is great for IDs, timestamps, or any value that shouldn't be mutated.
+
+
+```
+class Product {
+  readonly id: string;
+  name: string;
+  price: number;
+  readonly createdAt: Date;
+  
+  constructor(id: string, name: string, price: number) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+    this.createdAt = new Date();
+  }
+}
+
+const product = new Product("p-123", "Laptop", 999);
+// product.id = "p-456"; // ERROR! Cannot assign to 'id' because it is a read-only property.
+product.name = "Gaming Laptop"; // OK - name is not readonly
+```
+
+#### Property Initialization 
+
+If you don't initialize a property in the constructor, TypeScript will complain. You have a few options
+```
+class Config {
+  // Option 1: Initialize with a default value
+  timeout: number = 5000;
+  
+  // Option 2: Make it optional
+  apiKey?: string;
+  
+  // Option 3: Use definite assignment assertion (!)
+  // Use this when you KNOW it will be set before use (e.g., in an init method)
+  database!: string;
+  
+  init() {
+    this.database = "postgres://localhost";
+  }
+}
+```
+
+#### Static Properties and Methods 
+
+Static members belong to the class itself, not to instances. They're accessed via the class name.
+```
+class MathUtils {
+  static PI = 3.14159;
+  
+  static circleArea(radius: number): number {
+    return MathUtils.PI * radius * radius;
+  }
+}
+
+console.log(MathUtils.PI); // 3.14159
+console.log(MathUtils.circleArea(5)); // 78.53975
+```
+
+#### Constructor Parameter Shorthand
+TypeScript provides a convenient shorthand for declaring and initializing properties in the constructor. This is **extremely common** in real codebases.
+
+```
+// WITHOUT shorthand (verbose)
+class User {
+  public id: number;
+  private password: string;
+  protected role: string;
+  
+  constructor(id: number, password: string, role: string) {
+    this.id = id;
+    this.password = password;
+    this.role = role;
+  }
+}
+
+// WITH shorthand (clean and concise)
+class User {
+  constructor(
+    public id: number,
+    private password: string,
+    protected role: string
+  ) {
+    // Properties are automatically declared and initialized
+  }
+}
+
+// Both versions do exactly the same thing!
+const user = new User(1, "secret", "admin");
+```
+
+
 ### Access Modifiers (`public`, `private`, `protected`)
+TypeScript provides three access modifiers to control visibility of class members. This is crucial for encapsulation—hiding internal implementation details and exposing only what's necessary.
+
+#### `public` (Default)
+
+Members are accessible from anywhere. If you don't specify a modifier, it's `public` by default.
+
+```
+class User {
+  public name: string; // Explicitly public
+  email: string;       // Implicitly public (same thing)
+  
+  constructor(name: string, email: string) {
+    this.name = name;
+    this.email = email;
+  }
+}
+
+const user = new User("Alice", "alice@example.com");
+console.log(user.name);  // OK - public
+console.log(user.email); // OK - public
+```
+
+#### private
+
+Members are accessible only **within the class itself**. Not even subclasses can access them. This is perfect for internal state that shouldn't be modified directly.
+
+```
+class BankAccount {
+  private balance: number;
+  public owner: string;
+  
+  constructor(owner: string, initialBalance: number) {
+    this.owner = owner;
+    this.balance = initialBalance;
+  }
+  
+  // Public method to safely modify private state
+  deposit(amount: number): void {
+    if (amount > 0) {
+      this.balance += amount; // OK - accessing private from within the class
+    }
+  }
+  
+  // Public method to read private state
+  getBalance(): number {
+    return this.balance;
+  }
+}
+
+const account = new BankAccount("Alice", 1000);
+account.deposit(500);
+console.log(account.getBalance()); // 1500
+// console.log(account.balance);   // ERROR! Property 'balance' is private
+```
+
+#### protected
+
+Members are accessible within the class and its subclasses, but not from outside. This is useful when you want subclasses to have access to certain properties/methods but keep them hidden from the rest of the codebase.
+
+```
+class Animal {
+  protected name: string;
+  
+  constructor(name: string) {
+    this.name = name;
+  }
+  
+  protected makeSound(): void {
+    console.log("Some generic animal sound");
+  }
+}
+
+class Dog extends Animal {
+  bark(): void {
+    console.log(`${this.name} says: Woof!`); // OK - can access protected 'name'
+    this.makeSound(); // OK - can call protected method
+  }
+}
+
+const dog = new Dog("Rex");
+dog.bark(); // "Rex says: Woof!"
+// console.log(dog.name); // ERROR! Property 'name' is protected
+// dog.makeSound();       // ERROR! Method 'makeSound' is protected
+```
+
+
+**Access Modifier Summary**
+|Modifier   |Class      |Subclass   |Outside    |
+|-----------|-----------|-----------|-----------|
+|`public`   |✔          |✔          |✔          |
+|`protected`|✔          |✔          |𐄂          |
+|`private`  |✔          |𐄂          |𐄂          |
+
 
 ### Implement Interface (`implements`)
+
+The `implements` keyword ensures that a class matches the shape defined by an interface. This is different from `extends` (which is for class inheritance).
+
+#### Basic Implementation 
+
+```
+// Define the contract
+interface Logger {
+  log(message: string): void;
+  error(message: string): void;
+}
+
+// Class MUST implement all methods from the interface
+class ConsoleLogger implements Logger {
+  log(message: string): void {
+    console.log(`[LOG] ${message}`);
+  }
+  
+  error(message: string): void {
+    console.error(`[ERROR] ${message}`);
+  }
+}
+
+// ERROR: Class 'BadLogger' incorrectly implements interface 'Logger'
+// Property 'error' is missing
+class BadLogger implements Logger {
+  log(message: string): void {
+    console.log(message);
+  }
+  // Missing error() method!
+}
+```
+
+
+#### Multiple Interface Implementation 
+
+A class can implement multiple interfaces, separated by commas.
+
+```
+interface Printable {
+  print(): void;
+}
+
+interface Serializable {
+  serialize(): string;
+}
+
+interface Loggable {
+  log(): void;
+}
+
+class Document implements Printable, Serializable, Loggable {
+  constructor(public content: string) {}
+  
+  print(): void {
+    console.log(this.content);
+  }
+  
+  serialize(): string {
+    return JSON.stringify({ content: this.content });
+  }
+  
+  log(): void {
+    console.log(`Document: ${this.content}`);
+  }
+}
+```
+
+#### Extends vs Implements 
+
+This is a common point of confusion. Here's the difference:
+
+```
+// Interface extends Interface (adds more properties to the contract)
+interface Vehicle {
+  brand: string;
+  start(): void;
+}
+
+interface ElectricVehicle extends Vehicle {
+  batteryCapacity: number;
+  charge(): void;
+}
+
+// Class extends Class (inherits implementation)
+class BaseVehicle {
+  start(): void {
+    console.log("Starting vehicle...");
+  }
+}
+
+class Car extends BaseVehicle {
+  drive(): void {
+    console.log("Driving...");
+  }
+}
+
+// Class implements Interface (class must provide the implementation)
+class Tesla implements ElectricVehicle {
+  brand: string;
+  batteryCapacity: number;
+  
+  constructor(brand: string, batteryCapacity: number) {
+    this.brand = brand;
+    this.batteryCapacity = batteryCapacity;
+  }
+  
+  start(): void {
+    console.log("Silent start...");
+  }
+  
+  charge(): void {
+    console.log("Charging...");
+  }
+}
+```
+
+#### Key Differences
+
+
+|Feature                    | `extends`                             | `implements`              |
+|---------------------------|---------------------------------------|---------------------------|
+|Used with                  |Class → Class, Interface → Interface   |Class → Interface          |
+|Purpose                    |Inherit implementation                 | Enforce a contract        |
+|Can have multiple?         |No (single inheritance)                |Yes (multiple interfaces)  |
+|Provides implementation?   |Yes                                    |No (just the shape)        |
+
+
+#### Real-World Example: Service Layer
+
+```
+// Define service contracts
+interface UserRepository {
+  findById(id: string): User | null;
+  save(user: User): void;
+  delete(id: string): void;
+}
+
+interface EmailService {
+  send(to: string, subject: string, body: string): void;
+}
+
+// Implement the contracts
+class DatabaseUserRepository implements UserRepository {
+  private users: Map<string, User> = new Map();
+  
+  findById(id: string): User | null {
+    return this.users.get(id) || null;
+  }
+  
+  save(user: User): void {
+    this.users.set(user.id, user);
+  }
+  
+  delete(id: string): void {
+    this.users.delete(id);
+  }
+}
+
+class SMTPEmailService implements EmailService {
+  send(to: string, subject: string, body: string): void {
+    console.log(`Sending email to ${to}: ${subject}`);
+    // Actual SMTP implementation here
+  }
+}
+
+// Use dependency injection
+class UserService {
+  constructor(
+    private userRepo: UserRepository,
+    private emailService: EmailService
+  ) {}
+  
+  registerUser(name: string, email: string): void {
+    const user: User = {
+      id: crypto.randomUUID(),
+      name,
+      email
+    };
+    
+    this.userRepo.save(user);
+    this.emailService.send(email, "Welcome!", `Hi ${name}, welcome aboard!`);
+  }
+}
+
+// Easy to swap implementations (e.g., for testing)
+const userService = new UserService(
+  new DatabaseUserRepository(),
+  new SMTPEmailService()
+);
+```
+
+#### Abstract Classes (Brief Mention)
+
+Abstract classes are like a middle ground between interfaces and regular classes. They can have both implemented methods and abstract methods (that subclasses must implement).
+
+
+```
+abstract class Shape {
+  // Concrete method (has implementation)
+  describe(): void {
+    console.log(`I am a ${this.getName()}`);
+  }
+  
+  // Abstract method (must be implemented by subclasses)
+  abstract getName(): string;
+  abstract getArea(): number;
+}
+
+class Circle extends Shape {
+  constructor(private radius: number) {
+    super();
+  }
+  
+  getName(): string {
+    return "Circle";
+  }
+  
+  getArea(): number {
+    return Math.PI * this.radius ** 2;
+  }
+}
+
+const circle = new Circle(5);
+circle.describe(); // "I am a Circle"
+console.log(circle.getArea()); // 78.54...
+```
 
 
 ## Escaping Hatches & Assertions
 
+Sometimes TypeScript's strict type checking gets in the way, or you're working with external libraries and data that TypeScript can't fully understand. These "escape hatches" let you override TypeScript's type system when you know something the compiler doesn't. Use them sparingly and intentionally.
+
 ### Type Assertions / Casting (`as`)
 
+Type assertions tell TypeScript: "Trust me, I know this value is actually this specific type." It's like casting in other languages, but it only affects compile-time checking—it doesn't actually transform the data at runtime
+
+
+#### When to use `as`:
+
+1. DOM Manipulation: When you know more about an element than TypeScript does.
+2. Working with external data: When you're certain about the shape of data from an API.
+3. Legacy code integration: When bridging typed and untyped code.
+
+
+#### Basic Syntax
+
+```
+// Using 'as' keyword (preferred)
+const canvas = document.getElementById("my-canvas") as HTMLCanvasElement;
+canvas.width = 500; // TypeScript now knows this is a canvas element
+
+// Alternative syntax (less common, used in JSX/TSX files)
+const canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
+```
+
+#### Real-World Examples
+
+```
+// 1. DOM Elements
+const input = document.querySelector("#username") as HTMLInputElement;
+input.value = "Alice"; // TypeScript knows .value exists on input elements
+
+const img = document.querySelector(".profile-pic") as HTMLImageElement;
+img.src = "avatar.jpg"; // TypeScript knows .src exists on img elements
+
+// 2. API Responses (when you're confident about the shape)
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+async function fetchUser(id: string): Promise<User> {
+  const response = await fetch(`/api/users/${id}`);
+  const data = await response.json();
+  
+  // We trust the API returns the correct shape
+  return data as User;
+}
+
+// 3. Type narrowing when TypeScript can't infer
+function processValue(value: unknown) {
+  if (typeof value === "string") {
+    // TypeScript knows it's a string here
+    const str = value as string; // Redundant but explicit
+    console.log(str.toUpperCase());
+  }
+}
+
+// 4. Working with generic types
+const firstItem = [1, 2, 3][0] as number | undefined;
+```
+
+#### Double Assertions (Casting through `unknown`):
+
+Sometimes you need to cast to a completely unrelated type. TypeScript won't let you do this directly, but you can go through `unknown` first:
+
+
+```
+const user = { name: "Alice" };
+
+// ERROR: Conversion of type '{ name: string; }' to type 'string' 
+// may be a mistake
+const name = user as string;
+
+// OK: Cast to unknown first, then to the target type
+const name2 = user as unknown as string;
+
+// WARNING: This is dangerous! The runtime value is still an object,
+// but TypeScript thinks it's a string. Use with extreme caution.
+```
+
+**Type Assertions vs Type Guards**:
+
+```
+// BAD: Using assertions when you should use type guards
+function processData(data: unknown) {
+  const str = data as string; // Dangerous! What if it's not a string?
+  console.log(str.toUpperCase()); // Runtime error if data is a number
+}
+
+// GOOD: Using type guards to safely narrow
+function processDataSafe(data: unknown) {
+  if (typeof data === "string") {
+    console.log(data.toUpperCase()); // Safe!
+  }
+}
+```
+
+#### Best Practices:
+
+- Use `as` only when you have certainty about the type
+- Prefer type guards (typeof, instanceof) when possible
+- Avoid double assertions (as unknown as) unless absolutely necessary
+- Document why you're using an assertion with a comment.
+
+
 ### The Non-Null Assertion Operator (`!`)
+The non-null assertion operator (`!`) tells TypeScript: "I promise this value is NOT `null` or `undefined`, so stop complaining about it." It removes `null` and `undefined` from a type.
+
+
+
+#### When to use !
+
+1. **After checks**: When you've already verified the value exists.
+2. **DOM queries**: When you're certain an element exists.
+3. **Initialization patterns**: When a value is set before use but TypeScript can't track it.
+
+
+#### Basic Syntax 
+
+```
+let username: string | null = null;
+
+// TypeScript error: Object is possibly 'null'
+console.log(username.length);
+
+// Non-null assertion: "I know it's not null"
+username = "Alice";
+console.log(username!.length); // OK: 5
+```
+
+#### Real-World Examples
+
+```
+// 1. DOM Elements (when you're certain they exist)
+const header = document.getElementById("header")!;
+header.style.color = "blue"; // No null check needed
+
+// 2. After validation
+function processUser(user: User | null) {
+  if (!user) {
+    throw new Error("User is required");
+  }
+  
+  // TypeScript still thinks user might be null here (depending on version)
+  // Use ! to assert it's definitely not null
+  console.log(user!.name);
+}
+
+// 3. Map/Array lookups
+const users = new Map<string, User>();
+users.set("1", { id: "1", name: "Alice" });
+
+const user = users.get("1")!; // We know "1" exists
+console.log(user.name);
+
+// 4. Optional chaining alternative
+interface Config {
+  database?: {
+    host: string;
+    port: number;
+  };
+}
+
+const config: Config = {
+  database: { host: "localhost", port: 5432 }
+};
+
+// Without !: TypeScript thinks database might be undefined
+const host1 = config.database?.host; // Type: string | undefined
+
+// With !: We assert database exists
+const host2 = config.database!.host; // Type: string
+```
+
+#### Dangerous Usage (Avoid This)
+
+```
+// BAD: Using ! without actually checking
+function getUser(id: string): User | null {
+  // This might return null!
+  return database.findById(id);
+}
+
+const user = getUser("123")!; // DANGEROUS!
+console.log(user.name); // Runtime error if user is null!
+
+// GOOD: Check first, then use !
+const user = getUser("123");
+if (user) {
+  console.log(user.name); // Safe
+}
+
+// OR: Use optional chaining
+const name = getUser("123")?.name; // Safe, returns undefined if null
+```
+
+#### Non-Null Assertion in Class Properties 
+
+```
+class UserService {
+  // Use ! when you know the property will be initialized before use
+  private database!: Database;
+  
+  init() {
+    this.database = new Database();
+  }
+  
+  getUser(id: string) {
+    // TypeScript knows database is initialized (because of !)
+    return this.database.findById(id);
+  }
+}
+
+const service = new UserService();
+service.init(); // Must call this first!
+service.getUser("1"); // OK
+```
+
+#### Best Practices
+
+- Only use `!` when you have absolute certainty the value exists
+- Prefer optional chaining (`?`.) when the value might legitimately be null/undefined
+- Add comments explaining why you're using `!`.
+- Consider refactoring to avoid needing `!` in the first place.
 
 ### The `any` type vs the `unknow` type (and why we avoid `any`)
 
-## Team Conventions & Best Practices
+Both `any` and `unknown` can hold any value, but they behave very differently in terms of type safety. Understanding this difference is crucial for writing maintainable TypeScript code.
 
+
+#### The `any` Type: The Escape Hatch 
+
+`any` completely disables type checking for that value. It's like telling TypeScript: "Turn off your brain, I'll handle this myself."
+
+
+#### Why any is Dangerous 
+
+```
+// Problem 1: No autocomplete
+let user: any = getUser();
+user. // TypeScript offers NO suggestions
+
+// Problem 2: Errors propagate silently
+function processUser(user: any) {
+  // This might fail at runtime, but TypeScript won't warn you
+  return user.profile.settings.theme;
+}
+
+// Problem 3: It infects other types
+interface ApiResponse {
+  data: any; // Now everyone who uses this loses type safety
+}
+
+// Problem 4: Refactoring becomes impossible
+// If you change the shape of user data, TypeScript won't catch breaking changes
+```
+
+#### The `unknown` Type: The Safe Alternative
+
+`unknown` is like `any` in that it can hold any value, but it's type-safe. You cannot perform operations on an `unknown` value until you narrow its type.
+
+
+```
+let data: unknown = "hello";
+
+data = 123;           // OK
+data = { foo: "bar" }; // OK
+data = [1, 2, 3];     // OK
+
+// TypeScript PREVENTS operations on 'unknown'
+// console.log(data.toUpperCase()); // ERROR: Object is of type 'unknown'
+// console.log(data.foo);           // ERROR: Object is of type 'unknown'
+// data();                          // ERROR: Object is of type 'unknown'
+
+// You MUST narrow the type first
+if (typeof data === "string") {
+  console.log(data.toUpperCase()); // OK: TypeScript knows it's a string
+}
+
+if (Array.isArray(data)) {
+  console.log(data.length); // OK: TypeScript knows it's an array
+}
+```
+
+#### Real-World Comparison 
+
+```
+// BAD: Using 'any'
+function parseJSON(jsonString: string): any {
+  return JSON.parse(jsonString);
+}
+
+const result = parseJSON('{"name": "Alice"}');
+result.name;        // No error, but what if the JSON structure changes?
+result.foo.bar.baz; // No error, but will crash at runtime!
+
+// GOOD: Using 'unknown'
+function parseJSONSafe(jsonString: string): unknown {
+  return JSON.parse(jsonString);
+}
+
+const result2 = parseJSONSafe('{"name": "Alice"}');
+// result2.name; // ERROR: Object is of type 'unknown'
+
+// Must validate/narrow first
+if (typeof result2 === "object" && result2 !== null && "name" in result2) {
+  const user = result2 as { name: string };
+  console.log(user.name); // Safe!
+}
+```
+
+#### Type Guards with `unknown`
+
+```
+// Custom type guard function
+function isUser(value: unknown): value is User {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "name" in value &&
+    "email" in value
+  );
+}
+
+function processUnknownData(data: unknown) {
+  if (isUser(data)) {
+    // TypeScript knows data is User here
+    console.log(data.name);
+    console.log(data.email);
+  } else {
+    console.log("Not a valid user");
+  }
+}
+```
+
+
+## Team Conventions & Best Practices
