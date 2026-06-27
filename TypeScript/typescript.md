@@ -1842,6 +1842,163 @@ function processUnknownData(data: unknown) {
   }
 }
 ```
+## Error Handling in TypeScript
+
+Error handling is critical for building robust applications. TypeScript provides excellent tools to catch, handle, and communicate errors safely.
+
+### Basic try/catch/finally
 
 
-## Team Conventions & Best Practices
+The `try/catch/finally` statement is the foundation of error handling in TypeScript. It allows you to attempt risky operations and gracefully handle failures.
+
+### Basic Structure
+
+```typescript
+try {
+  // Code that might throw an error
+  const result = riskyOperation();
+  console.log(result);
+} catch (error) {
+  // Code that runs if an error occurs
+  console.error("Something went wrong:", error);
+} finally {
+  // Code that ALWAYS runs, whether there was an error or not
+  // Great for cleanup: closing files, releasing resources, etc.
+  console.log("Cleaning up...");
+}
+```
+
+### Throwing Errors
+
+Use the `throw` keyword to create and throw errors. You can throw any value, but it's best practice to throw `Error` objects or custom error classes.
+
+
+### Basic Throwing
+
+```typescript
+function divide(a: number, b: number): number {
+  if (b === 0) {
+    throw new Error("Cannot divide by zero");
+  }
+  return a / b;
+}
+
+try {
+  const result = divide(10, 0);
+} catch (error) {
+  console.error(error.message); // "Cannot divide by zero"
+}
+```
+
+### Throwing Different Types
+
+```typescript
+// Good: Throw Error objects
+throw new Error("Something went wrong");
+
+// Good: Throw custom error classes (see below)
+throw new ValidationError("Invalid email format");
+
+// Bad: Throw strings or primitives (loses stack trace)
+throw "Something went wrong"; // Don't do this
+throw 404; // Don't do this
+```
+
+### Understanding the `error` Type in catch Blocks
+
+
+
+In TypeScript 4.4+, the `error` parameter in catch blocks is typed as `unknown` by default (not `any`). This is safer but requires you to check the type before using it.
+
+
+### Handling Unknown Errors
+```typescript
+try {
+  riskyOperation();
+} catch (error) {
+  // error is of type 'unknown'
+
+  // Option 1: Check if it's an Error instance
+  if (error instanceof Error) {
+    console.error(error.message);
+    console.error(error.stack);
+  }
+
+  // Option 2: Type guard
+  if (isError(error)) {
+    console.error(error.message);
+  }
+
+  // Option 3: Type assertion (if you're certain)
+  const err = error as Error;
+  console.error(err.message);
+
+  // Option 4: Just log it (safest)
+  console.error("An error occurred:", error);
+}
+
+// Helper type guard
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+```
+
+### Custom Error Classes
+
+Custom error classes let you create specific error types for different failure scenarios. This makes error handling more precise and maintainable.
+
+
+### Creating Custom Errors
+
+```typescript
+// Base custom error
+class AppError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public statusCode: number = 500
+  ) {
+    super(message);
+    this.name = "AppError";
+
+    // Maintains proper stack trace (TypeScript specific)
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+// Specific error types
+class ValidationError extends AppError {
+  constructor(
+    message: string,
+    public field?: string
+  ) {
+    super(message, "VALIDATION_ERROR", 400);
+    this.name = "ValidationError";
+    Object.setPrototypeOf(this, ValidationError.prototype);
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(resource: string, id: string) {
+    super(`${resource} with id ${id} not found`, "NOT_FOUND", 404);
+    this.name = "NotFoundError";
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+class AuthenticationError extends AppError {
+  constructor(message: string = "Authentication failed") {
+    super(message, "AUTH_ERROR", 401);
+    this.name = "AuthenticationError";
+    Object.setPrototypeOf(this, AuthenticationError.prototype);
+  }
+}
+
+class AuthorizationError extends AppError {
+  constructor(message: string = "Insufficient permissions") {
+    super(message, "AUTHORIZATION_ERROR", 403);
+    this.name = "AuthorizationError";
+    Object.setPrototypeOf(this, AuthorizationError.prototype);
+  }
+}
+```
