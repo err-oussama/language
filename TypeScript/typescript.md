@@ -1,8 +1,5 @@
 #  TypeScript 
 
-
-
-
 ## Basic Types and Variables
 
 ### Primitive Types 
@@ -17,7 +14,7 @@ TypeScript adds type annotations to standard JavaScript primitives. These are th
 - `bigint`: For extremely large integers (rarely used in standard apps, but available).
 - `symbol`: Unique and immutable identifiers (mostly used in advanced state management).
 
-```
+```typescript
 let userName: string = "Alice";
 let age: number = 28;
 let isDeveloper: boolean = true;
@@ -35,7 +32,7 @@ How to type collections of data.
 - **Tuples**: A strict, fixed-length array where you know the exact type at each index.
 - **Objects**: Can be typed inline, but in a real codebase, you will almost always use interface or type (covered in Section 4).
 
-```
+```typescript
 // Arrays
 let skills: string[] = ["TypeScript", "React", "Node"];
 // OR
@@ -56,14 +53,14 @@ user.not_exist; <- this will give undefined
 ```
 
 
-### Type Inference vs Explici Annotation 
+### Type Inference vs Explicity Annotation 
 
 TypeScript is smart. You don't always have to write the type yourself.
 
 - **Explicit Annotation**: You manually write the type (e.g., `let x: number = 5`). Use this when declaring variables without initializing them immediately, or when you need to restrict a variable to a specific subset of values.
 - **Implicit Inference** : TypeScript guesses the type based on the value you assign. This keeps your code clean and readable.
 
-```
+```typescript
 // EXPLICIT: Required because we don't have a value yet
 let score: number; 
 score = 10;
@@ -88,7 +85,7 @@ Standard JavaScript scoping rules apply, but TypeScript enforces them at compile
 - `let`: Can be reassigned, but only to the same type. It is block-scoped (only exists inside the `{}` where it was declared).
 - `var`: **Avoid completely**. It is function-scoped (leaks out of blocks) and can be redeclared, leading to unpredictable bugs. Modern TypeScript linters will usually flag `var` as an error.
 
-```
+```typescript
 // const: Inferred as the exact string literal "https://api.example.com"
 const API_URL = "https://api.example.com"; 
 // API_URL = "new url"; // ERROR! Cannot reassign a const.
@@ -107,7 +104,7 @@ var oldVariable = "don't use me";
 ### Typing parameters and Return values
 
 Every function in a TypeScript codebase will have types attached to its inputs (parameters) and its output (return value). The syntax uses colons (`:`) to declare what each piece of data must be.
-```
+```typescript
 // Syntax: function name(param: type, param: type): returnType {}
 
 function add(a: number, b: number): number {
@@ -120,7 +117,7 @@ add(5, 10);    // OK
 
 If you forget the return type, TypeScript will infer it from what you return. However, explicitly writing it is considered a best practice in teams because it acts as documentation and catches bugs if you accidentally return the wrong thing.
 
-```
+```typescript
 // Inferred return type: TypeScript knows this returns a string
 function greet(name: string) {
   return `Hello, ${name}`;
@@ -136,7 +133,7 @@ function greetExplicit(name: string): string {
 
 Arrow functions work exactly the same way as regular functions, just with different syntax. You will see these **everywhere** in modern TypeScript codebases, especially in React, callbacks, and array methods.
 
-```
+```typescript
 // Full syntax with curly braces and explicit return
 const multiply = (x: number, y: number): number => {
   return x * y;
@@ -158,7 +155,7 @@ const handleClick = (event: MouseEvent): void => {
 
 Sometimes you need to define the shape of a function itself, not just call it. This is common when passing functions as arguments or storing them in variables.
 
-```
+```typescript
 // Define what a function MUST look like
 type MathOperation = (a: number, b: number) => number;
 
@@ -178,7 +175,7 @@ Not every function needs every argument every time. TypeScript gives you two too
 
 Place a `?` after the parameter name. If the caller doesn't provide it, the value will be `undefined`. Optional parameters **must** come after required parameters.
 
-```
+```typescript
 function welcomeUser(name: string, age?: number): string {
     return `Welcome ${name}, you are ${age} years old.`;
 }
@@ -193,7 +190,7 @@ welcomeUser("Alice", 28);   // OK: age is 28
 Assign a fallback value using `=`. If the caller doesn't provide the argument, the default value is used instead of `undefined`. When you provide a default value, TypeScript automatically infers the type.
 
 
-```
+```typescript
 function sendEmail(to: string, subject: string = "No Subject"): void {
   console.log(`Sending to ${to} with subject: ${subject}`);
 }
@@ -208,7 +205,7 @@ These two return types describe functions that **don't give you useful data back
 
 `void`: The function runs, does its job, but returns nothing meaningful. You will see this on functions that log to the console, update the DOM, or trigger side effects.
 
-```
+```typescript
 function logMessage(message: string): void {
   console.log(message);
   // No return statement needed (or you can write 'return;' with no value)
@@ -218,7 +215,7 @@ function logMessage(message: string): void {
 
 `never`: The function **never reaches its end**. It either throws an error or runs an infinite loop. You will mostly see this in error-handling functions or exhaustive switch statements.
 
-```
+```typescript
 // Throws an error and stops execution — never returns
 function throwError(message: string): never {
   throw new Error(message);
@@ -264,7 +261,7 @@ An `interface` is specifically designed to describe the shape of an **object**. 
 - `?`**(Optional)**: The property might not exist.
 - `readonly`: The property can be set once (usually at creation) but cannot be changed afterward.
 
-```
+```typescript
 interface User {
   id: number;               // Required property
   username: string;         // Required property
@@ -293,7 +290,7 @@ While `interface` is strictly for objects, a `type` alias is much more flexible.
 
 Think of `type` as creating a new variable, but the value it holds is a TypeScript type.
 
-```
+```typescript
 // 1. Typing an object (Very similar to interface)
 type Product = {
   id: string;
@@ -334,7 +331,7 @@ As your app grows, you will notice objects sharing common properties (e.g., both
 #### Extending Interfaces (`extends`)
 Used to create a new interface that copies all properties from an existing one, and adds new ones. This is the standard Object-Oriented approach.
 
-```
+```typescript
 interface BaseEntity {
   id: string;
   createdAt: Date;
@@ -360,7 +357,7 @@ const dev: Employee = {
 
 Used to merge multiple `type` aliases (or interfaces) into a single, combined type. The `&` symbol means *AND* (the resulting object must have properties from all intersected types).
 
-```
+```typescript
 type HasTimestamps = {
   createdAt: Date;
   updatedAt: Date;
@@ -390,7 +387,7 @@ A Union type allows a value to be one of several types. You use the pipe symbol 
 
 This is incredibly common when dealing with data that might change shape, like API responses or form inputs.
 
-```
+```typescript
 // A variable that can be EITHER a string OR a number
 let userId: string | number;
 
@@ -420,7 +417,7 @@ When defining the shape of an object (using `interface` or `type`), you can mark
 This tells TypeScript: "This property might exist, or it might be completely missing from the object."
 
 
-```
+```typescript
 interface UserProfile {
   username: string;
   email: string;
@@ -452,7 +449,7 @@ So far, we've used types like `string` or `number`, which represent a massive ra
 
 Literal types are almost always combined with Union Types (`|`) to create a strict list of allowed options. This is a modern, highly preferred alternative to using `enum` or random strings/numbers in your code.
 
-```
+```typescript
 // 1. String Literal Types
 // Instead of just 'string', it MUST be exactly one of these three words.
 type Theme = "light" | "dark" | "system";
@@ -490,7 +487,7 @@ updateUI("loading"); // OK
 Think of generics as **variables, but for types**.
 When you write a regular function, you use parameters (variables) so the function can work with different values:
 
-```
+```typescript
 function echo(value: string): string {
   return value;
 }
@@ -501,7 +498,7 @@ But what if you want a function to work with different types? You could use `any
 
 The syntax uses angle brackets `< >` with a type parameter (conventionally named `T`, but can be anything like `TValue`, `TResult`, etc.):
 
-```
+```typescript
 // T is a placeholder for whatever type the caller provides
 function echo<T>(value: T): T {
   return value;
@@ -514,7 +511,7 @@ const boolResult = echo(true);       // T becomes 'boolean'
 
 
 **Why not just use `any`?**
-```
+```typescript
 // BAD: Using 'any' loses type information
 function echoBad(value: any): any {
   return value;
@@ -536,7 +533,7 @@ Generic functions allow you to write reusable logic that works with multiple typ
 
 #### Basic Generic Function 
 
-```
+```typescript
 // Returns the first item of any array
 function getFirst<T>(items: T[]): T {
   return items[0];
@@ -549,7 +546,7 @@ const firstUser = getFirst([{ name: "Alice" }]); // Type: { name: string }
 
 #### Multiple Type Parameters 
 You can use multiple type parameters when a function needs to work with more than one type:
-```
+```typescript
 // Creates a key-value pair
 function createPair<K, V>(key: K, value: V): [K, V] {
   return [key, value];
@@ -563,7 +560,7 @@ const pair3 = createPair("user", { name: "Bob" }); // Type: [string, { name: str
 #### Constraining Generics
 
 Sometimes you want to restrict what types can be used. Use the extends keyword to constrain generics:
-```
+```typescript
 // T must have a 'length' property (strings, arrays, etc.)
 function logLength<T extends { length: number }>(item: T): void {
   console.log(`Length: ${item.length}`);
@@ -580,7 +577,7 @@ Generics aren't limited to functions. You can use them in interfaces and classes
 
 #### Generic Interfaces 
 
-```
+```typescript
 // A box that can hold any type of content
 interface Box<T> {
   content: T;
@@ -617,7 +614,7 @@ const ageEntry: KeyValuePair<string, number> = {
 
 Classes can also be generic, allowing you to create reusable components that work with different data types.
 
-```
+```typescript
 class Stack<T> {
   private items: T[] = [];
 
@@ -654,7 +651,7 @@ const topString = stringStack.pop(); // Type: string | undefined
 #### Generic Classes with Constraints
 
 
-```
+```typescript
 // T must have an 'id' property
 class Repository<T extends { id: string }> {
   private items: T[] = [];
@@ -690,7 +687,7 @@ if (user) {
 
 TypeScript provides several built-in generic types that you'll encounter constantly:
 
-```
+```typescript
 // Promise<T> - A promise that resolves to type T
 async function getUser(): Promise<User> {
   return { id: "1", name: "Alice" };
@@ -718,7 +715,7 @@ TypeScript provides a set of built-in utility types that let you transform exist
 `Partial<T>` takes an existing type and makes all of its properties optional. This is incredibly useful when you want to update an object but don't want to require every single property.
 
 **Without Partial (The Problem)**:
-```
+```typescript
 interface User {
   id: string;
   name: string;
@@ -740,7 +737,7 @@ updateUser(
 
 **With Partial (The Solution)**:
 
-```
+```typescript
 interface User {
   id: string;
   name: string;
@@ -775,7 +772,7 @@ updateUser(
 
 `Required<T>` does the opposite of `Partial`—it takes a type with optional properties and makes **all of them required**. This is useful when you have a configuration object where some properties are optional during input, but you want to ensure they all exist after processing
 
-```
+```typescript
 interface UserSettings {
   theme?: "light" | "dark";
   notifications?: boolean;
@@ -819,7 +816,7 @@ These two utility types let you create new types by selecting or excluding speci
 **`Pick<T, K>`: Keep only specified properties.**
 `Pick<T, K>` creates a new type by picking only the properties `K` from type `T`.
 
-```
+```typescript
 interface User {
   id: string;
   name: string;
@@ -853,7 +850,7 @@ function getUserProfile(userId: string): UserSummary {
 
 `Omit<T, K>` creates a new type by omitting (removing) the properties `K` from type `T`. This is the opposite of `Pick`.
 
-```
+```typescript
 interface User {
   id: string;
   name: string;
@@ -902,7 +899,7 @@ const newUser: CreateUserInput = {
 
 This is the TypeScript way to type dictionaries, maps, or key-value stores.
 
-```
+```typescript
 // A dictionary where keys are strings and values are numbers
 type Inventory = Record<string, number>;
 
@@ -935,7 +932,7 @@ When you work with Union types (values that can be multiple types), TypeScript d
 Type narrowing is the process of refining a variable's type from a broader type (like `string` | `number`) to a more specific type (like just `string`) within a specific block of code.
 
 **The Problem**:
-```
+```typescript
 function printLength(value: string | number) {
   // ERROR: Property 'length' does not exist on type 'string | number'
   console.log(value.length); 
@@ -948,7 +945,7 @@ TypeScript is saying: "I know `value` is either a string or a number, but I don'
 
 
 **The Solution - Type Narrowing**:
-```
+```typescript
 function printLength(value: string | number) {
   if (typeof value === "string") {
     // TypeScript NOW knows value is a string
@@ -981,7 +978,7 @@ TypeScript recognizes several patterns that narrow types. These are called "type
 Use `typeof` to check the type of primitive values (string, number, boolean, etc.).
 
 
-```
+```typescript
 function processValue(value: string | number | boolean) {
   if (typeof value === "string") {
     // value is narrowed to 'string'
@@ -1001,7 +998,7 @@ function processValue(value: string | number | boolean) {
 
 **Important limitation**: `typeof` can't distinguish between different object types. Both arrays and objects return `"object"`.
 
-```
+```typescript
 function handleData(data: string[] | { name: string }) {
   // BAD: This doesn't work - both return "object"
   if (typeof data === "object") {
@@ -1023,7 +1020,7 @@ function handleData(data: string[] | { name: string }) {
 
 Use the `in` operator to check if a property exists on an object. This is perfect for narrowing union types of objects.
 
-```
+```typescript
 interface Fish {
   swim: () => void;
   name: string;
@@ -1071,7 +1068,7 @@ function handleResponse(response: SuccessResponse | ErrorResponse) {
 
 Use `instanceof` to check if an object is an instance of a specific class. This is common when working with custom classes or built-in classes like `Date` or `Error`.
 
-```
+```typescript
 class Dog {
   bark() {
     console.log("Woof!");
@@ -1121,7 +1118,7 @@ function formatDate(value: string | Date) {
 
 TypeScript also narrows types based on truthiness checks (checking if a value is truthy or falsy).
 
-```
+```typescript
 function printMessage(message: string | null | undefined) {
   if (message) {
     // TypeScript knows message is a non-empty string
@@ -1159,7 +1156,7 @@ Discriminated unions (also called "tagged unions" or "algebraic data types") are
 
 **Basic Example**:
 
-```
+```typescript
 // All shapes have a 'kind' property with a literal type
 type Shape =
   | { kind: "circle"; radius: number }
@@ -1194,7 +1191,7 @@ console.log(getArea(square)); // 16
 
 Discriminated unions are extremely common in state management (Redux, Zustand, etc.) and API handling.
 
-```
+```typescript
 // API request states
 type RequestState<T> =
   | { status: "idle" }
@@ -1234,7 +1231,7 @@ function renderUserList(state: RequestState<User[]>) {
 
 **Real-world Example: Actions/Events**
 
-```
+```typescript
 // Different types of actions in a system
 type Action =
   | { type: "ADD_TODO"; payload: { text: string } }
@@ -1282,7 +1279,7 @@ function reducer(state: TodoState, action: Action): TodoState {
 **Exhaustiveness Checking**
 One of the most powerful features of discriminated unions is that TypeScript can tell you if you forgot to handle a case.
 
-```
+```typescript
 type Shape =
   | { kind: "circle"; radius: number }
   | { kind: "square"; sideLength: number };
@@ -1321,7 +1318,7 @@ In TypeScript, you must declare the type of every class property. Unlike JavaScr
 
 #### Basic Class Structure
 
-```
+```typescript
 class User {
   // Property declarations with types
   id: number;
@@ -1353,7 +1350,7 @@ console.log(user.greet()); // "Hello, I'm Alice"
 Use `readonly` to prevent properties from being changed after initialization. This is great for IDs, timestamps, or any value that shouldn't be mutated.
 
 
-```
+```typescript
 class Product {
   readonly id: string;
   name: string;
@@ -1376,7 +1373,7 @@ product.name = "Gaming Laptop"; // OK - name is not readonly
 #### Property Initialization 
 
 If you don't initialize a property in the constructor, TypeScript will complain. You have a few options
-```
+```typescript
 class Config {
   // Option 1: Initialize with a default value
   timeout: number = 5000;
@@ -1397,7 +1394,7 @@ class Config {
 #### Static Properties and Methods 
 
 Static members belong to the class itself, not to instances. They're accessed via the class name.
-```
+```typescript
 class MathUtils {
   static PI = 3.14159;
   
@@ -1413,7 +1410,7 @@ console.log(MathUtils.circleArea(5)); // 78.53975
 #### Constructor Parameter Shorthand
 TypeScript provides a convenient shorthand for declaring and initializing properties in the constructor. This is **extremely common** in real codebases.
 
-```
+```typescript
 // WITHOUT shorthand (verbose)
 class User {
   public id: number;
@@ -1450,7 +1447,7 @@ TypeScript provides three access modifiers to control visibility of class member
 
 Members are accessible from anywhere. If you don't specify a modifier, it's `public` by default.
 
-```
+```typescript
 class User {
   public name: string; // Explicitly public
   email: string;       // Implicitly public (same thing)
@@ -1470,7 +1467,7 @@ console.log(user.email); // OK - public
 
 Members are accessible only **within the class itself**. Not even subclasses can access them. This is perfect for internal state that shouldn't be modified directly.
 
-```
+```typescript
 class BankAccount {
   private balance: number;
   public owner: string;
@@ -1503,7 +1500,7 @@ console.log(account.getBalance()); // 1500
 
 Members are accessible within the class and its subclasses, but not from outside. This is useful when you want subclasses to have access to certain properties/methods but keep them hidden from the rest of the codebase.
 
-```
+```typescript
 class Animal {
   protected name: string;
   
@@ -1544,7 +1541,7 @@ The `implements` keyword ensures that a class matches the shape defined by an in
 
 #### Basic Implementation 
 
-```
+```typescript
 // Define the contract
 interface Logger {
   log(message: string): void;
@@ -1577,7 +1574,7 @@ class BadLogger implements Logger {
 
 A class can implement multiple interfaces, separated by commas.
 
-```
+```typescript
 interface Printable {
   print(): void;
 }
@@ -1611,7 +1608,7 @@ class Document implements Printable, Serializable, Loggable {
 
 This is a common point of confusion. Here's the difference:
 
-```
+```typescript
 // Interface extends Interface (adds more properties to the contract)
 interface Vehicle {
   brand: string;
@@ -1669,7 +1666,7 @@ class Tesla implements ElectricVehicle {
 
 #### Real-World Example: Service Layer
 
-```
+```typescript
 // Define service contracts
 interface UserRepository {
   findById(id: string): User | null;
@@ -1736,7 +1733,7 @@ const userService = new UserService(
 Abstract classes are like a middle ground between interfaces and regular classes. They can have both implemented methods and abstract methods (that subclasses must implement).
 
 
-```
+```typescript
 abstract class Shape {
   // Concrete method (has implementation)
   describe(): void {
@@ -1786,7 +1783,7 @@ Type assertions tell TypeScript: "Trust me, I know this value is actually this s
 
 #### Basic Syntax
 
-```
+```typescript
 // Using 'as' keyword (preferred)
 const canvas = document.getElementById("my-canvas") as HTMLCanvasElement;
 canvas.width = 500; // TypeScript now knows this is a canvas element
@@ -1797,7 +1794,7 @@ const canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
 
 #### Real-World Examples
 
-```
+```typescript
 // 1. DOM Elements
 const input = document.querySelector("#username") as HTMLInputElement;
 input.value = "Alice"; // TypeScript knows .value exists on input elements
@@ -1838,7 +1835,7 @@ const firstItem = [1, 2, 3][0] as number | undefined;
 Sometimes you need to cast to a completely unrelated type. TypeScript won't let you do this directly, but you can go through `unknown` first:
 
 
-```
+```typescript
 const user = { name: "Alice" };
 
 // ERROR: Conversion of type '{ name: string; }' to type 'string' 
@@ -1854,7 +1851,7 @@ const name2 = user as unknown as string;
 
 **Type Assertions vs Type Guards**:
 
-```
+```typescript
 // BAD: Using assertions when you should use type guards
 function processData(data: unknown) {
   const str = data as string; // Dangerous! What if it's not a string?
@@ -1891,7 +1888,7 @@ The non-null assertion operator (`!`) tells TypeScript: "I promise this value is
 
 #### Basic Syntax 
 
-```
+```typescript
 let username: string | null = null;
 
 // TypeScript error: Object is possibly 'null'
@@ -1904,7 +1901,7 @@ console.log(username!.length); // OK: 5
 
 #### Real-World Examples
 
-```
+```typescript
 // 1. DOM Elements (when you're certain they exist)
 const header = document.getElementById("header")!;
 header.style.color = "blue"; // No null check needed
@@ -1948,7 +1945,7 @@ const host2 = config.database!.host; // Type: string
 
 #### Dangerous Usage (Avoid This)
 
-```
+```typescript
 // BAD: Using ! without actually checking
 function getUser(id: string): User | null {
   // This might return null!
@@ -1970,7 +1967,7 @@ const name = getUser("123")?.name; // Safe, returns undefined if null
 
 #### Non-Null Assertion in Class Properties 
 
-```
+```typescript
 class UserService {
   // Use ! when you know the property will be initialized before use
   private database!: Database;
@@ -2009,7 +2006,7 @@ Both `any` and `unknown` can hold any value, but they behave very differently in
 
 #### Why any is Dangerous 
 
-```
+```typescript
 // Problem 1: No autocomplete
 let user: any = getUser();
 user. // TypeScript offers NO suggestions
@@ -2034,7 +2031,7 @@ interface ApiResponse {
 `unknown` is like `any` in that it can hold any value, but it's type-safe. You cannot perform operations on an `unknown` value until you narrow its type.
 
 
-```
+```typescript
 let data: unknown = "hello";
 
 data = 123;           // OK
@@ -2058,7 +2055,7 @@ if (Array.isArray(data)) {
 
 #### Real-World Comparison 
 
-```
+```typescript
 // BAD: Using 'any'
 function parseJSON(jsonString: string): any {
   return JSON.parse(jsonString);
@@ -2085,7 +2082,7 @@ if (typeof result2 === "object" && result2 !== null && "name" in result2) {
 
 #### Type Guards with `unknown`
 
-```
+```typescript
 // Custom type guard function
 function isUser(value: unknown): value is User {
   return (
