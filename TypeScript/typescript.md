@@ -1639,44 +1639,6 @@ canvas.width = 500; // TypeScript now knows this is a canvas element
 const canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
 ```
 
-#### Real-World Examples
-
-```typescript
-// 1. DOM Elements
-const input = document.querySelector("#username") as HTMLInputElement;
-input.value = "Alice"; // TypeScript knows .value exists on input elements
-
-const img = document.querySelector(".profile-pic") as HTMLImageElement;
-img.src = "avatar.jpg"; // TypeScript knows .src exists on img elements
-
-// 2. API Responses (when you're confident about the shape)
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-async function fetchUser(id: string): Promise<User> {
-  const response = await fetch(`/api/users/${id}`);
-  const data = await response.json();
-  
-  // We trust the API returns the correct shape
-  return data as User;
-}
-
-// 3. Type narrowing when TypeScript can't infer
-function processValue(value: unknown) {
-  if (typeof value === "string") {
-    // TypeScript knows it's a string here
-    const str = value as string; // Redundant but explicit
-    console.log(str.toUpperCase());
-  }
-}
-
-// 4. Working with generic types
-const firstItem = [1, 2, 3][0] as number | undefined;
-```
-
 #### Double Assertions (Casting through `unknown`):
 
 Sometimes you need to cast to a completely unrelated type. TypeScript won't let you do this directly, but you can go through `unknown` first:
@@ -1745,51 +1707,6 @@ console.log(username.length);
 username = "Alice";
 console.log(username!.length); // OK: 5
 ```
-
-#### Real-World Examples
-
-```typescript
-// 1. DOM Elements (when you're certain they exist)
-const header = document.getElementById("header")!;
-header.style.color = "blue"; // No null check needed
-
-// 2. After validation
-function processUser(user: User | null) {
-  if (!user) {
-    throw new Error("User is required");
-  }
-  
-  // TypeScript still thinks user might be null here (depending on version)
-  // Use ! to assert it's definitely not null
-  console.log(user!.name);
-}
-
-// 3. Map/Array lookups
-const users = new Map<string, User>();
-users.set("1", { id: "1", name: "Alice" });
-
-const user = users.get("1")!; // We know "1" exists
-console.log(user.name);
-
-// 4. Optional chaining alternative
-interface Config {
-  database?: {
-    host: string;
-    port: number;
-  };
-}
-
-const config: Config = {
-  database: { host: "localhost", port: 5432 }
-};
-
-// Without !: TypeScript thinks database might be undefined
-const host1 = config.database?.host; // Type: string | undefined
-
-// With !: We assert database exists
-const host2 = config.database!.host; // Type: string
-```
-
 #### Dangerous Usage (Avoid This)
 
 ```typescript
@@ -1897,33 +1814,6 @@ if (typeof data === "string") {
 
 if (Array.isArray(data)) {
   console.log(data.length); // OK: TypeScript knows it's an array
-}
-```
-
-#### Real-World Comparison 
-
-```typescript
-// BAD: Using 'any'
-function parseJSON(jsonString: string): any {
-  return JSON.parse(jsonString);
-}
-
-const result = parseJSON('{"name": "Alice"}');
-result.name;        // No error, but what if the JSON structure changes?
-result.foo.bar.baz; // No error, but will crash at runtime!
-
-// GOOD: Using 'unknown'
-function parseJSONSafe(jsonString: string): unknown {
-  return JSON.parse(jsonString);
-}
-
-const result2 = parseJSONSafe('{"name": "Alice"}');
-// result2.name; // ERROR: Object is of type 'unknown'
-
-// Must validate/narrow first
-if (typeof result2 === "object" && result2 !== null && "name" in result2) {
-  const user = result2 as { name: string };
-  console.log(user.name); // Safe!
 }
 ```
 
