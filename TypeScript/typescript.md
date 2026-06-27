@@ -1188,6 +1188,7 @@ console.log(getArea(square)); // 16
 ```
 
 **Exhaustiveness Checking**
+
 One of the most powerful features of discriminated unions is that TypeScript can tell you if you forgot to handle a case.
 
 ```typescript
