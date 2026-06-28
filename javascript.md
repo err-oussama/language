@@ -6,9 +6,13 @@
 **Variable Declaration**
 
 ```javascript
-const PI = 3.14;      // Block-scoped, cannot be reassigned
-let count = 0;        // Block-scoped, can be reassigned
-var legacy = "old";   // Function-scoped (Avoid in modern JS)
+const PI = 3.14;        // Block-scoped, cannot be reassigned
+let count = 0;          // Block-scoped, can be reassigned
+var legacy = "old";     // Function-scoped (Avoid in modern JS)
+
+// ⚠️ Implicit Global (The Legacy Mistake)
+leak = "will be global";// No keyword? Automatically becomes a global variable (window.b).
+                        // ❌ Throws a ReferenceError in "use strict" or ES Modules!
 ```
 
 
@@ -324,10 +328,3 @@ myLabel: for (let i = 0; i < 5; i++) {
 // Comma Operator (Evaluates multiple expressions, returns last)
 let x = (1, 2, 3); // x is 3
 ```
-
-
-
-
-
-
-
