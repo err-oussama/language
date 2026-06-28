@@ -244,9 +244,11 @@ try {
   // Code that may throw an error
   if (Math.random() > 0.5) throw new Error("Something went wrong!");
   if (Math.random() > 0.5) throw "A custom string error";
+  log("Success");
 } catch (error) {
   // Handle the error
-  console.error(error.message);
+  if (typeof error === "string") log(error);
+  else console.error(error.message);
 } finally {
   // Runs regardless of success or failure (e.g., cleanup)
   console.log("Cleanup complete.");
