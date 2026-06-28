@@ -2002,3 +2002,125 @@ class AuthorizationError extends AppError {
   }
 }
 ```
+
+## Modules: Import and Export
+
+TypeScript uses ES modules (ESM) to organize code into separate files. Every file is a module, and you use `export` to share code and `import` to use it. Understanding imports/exports is essential for navigating any real codebase.
+
+
+### Named Exports and Imports
+
+
+Named exports let you export multiple values from a single file. The imported name must match the exported name exactly.
+
+
+
+**exporting**:
+
+```typescript
+// math.ts
+export function add(a: number, b: number): number {
+  return a + b;
+}
+
+export function subtract(a: number, b: number): number {
+  return a - b;
+}
+
+export const PI = 3.14159;
+
+export interface MathResult {
+  value: number;
+  operation: string;
+}
+```
+
+**imporing**:
+
+
+```typescript
+// main.ts
+// Import specific named exports
+import { add, subtract, PI } from "./math";
+
+// Import with renaming (useful for avoiding conflicts)
+import { add as addNumbers } from "./math";
+
+// Import everything as a namespace object
+import * as MathUtils from "./math";
+console.log(MathUtils.add(5, 3));
+console.log(MathUtils.PI);
+
+// Usage
+const sum = add(5, 3);
+const difference = subtract(10, 4);
+console.log(sum, difference, PI);
+```
+
+**Best Practice**: Named exports are preferred in modern TypeScript codebases because they:
+- Make it clear what's available from a module
+- Enable better tree-shaking (removing unused code)
+- Prevent naming conflicts
+- Work well with IDE autocomplete
+
+
+
+
+### Default Exports and Imports
+
+
+Default exports let you export a single value as the "main" export of a file. You can import it with any name you want.
+
+**Exporting**:
+
+
+
+```typescript 
+// User.ts
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export default User; // Default export
+
+// OR
+
+// logger.ts
+class Logger {
+  log(message: string): void {
+    console.log(message);
+  }
+}
+
+export default Logger; // Default export
+```
+
+**Importing**:
+
+```
+// main.ts
+// Import default - you choose the name
+import User from "./User";
+import Logger from "./logger";
+
+// The name doesn't have to match the file name
+import MyUser from "./User"; // Still works!
+import MyLogger from "./logger"; // Still works!
+
+// Usage
+const user: User = { id: "1", name: "Alice", email: "alice@example.com" };
+const logger = new Logger();
+logger.log("Hello");
+```
+
+
+### When to Use Default vs Named:
+
+
+|Use Default Export When                    |Use Named Export When            |
+|-------------------------------------------|---------------------------------|
+|File has one main export (class, component)|File has multiple related exports|
+|Creating a module's "main" interface       |You want explicit imports        |
+|React components (convention)              |Better tree-shaking is needed    |
